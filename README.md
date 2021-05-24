@@ -6,6 +6,8 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 * BHD - [**Beyond-HD**](https://beyond-hd.me)
 * BLU - [**Blutopia**](https://blutopia.xyz)
 * R4E - [**Racing4Everyone**](https://racing4everyone.eu/)
+* Telly - [**Telly.wtf**](https://telly.wtf/)
+* Ntelogo - [**Ntelogo**](https://ntelogo.org/)
 
 
 <!-- Basic setup -->
@@ -15,7 +17,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 3. Rename `config.env.sample` to `config.env`
 4. Fill out the required values in `config.env`
 5. Ensure you have [mediainfo](https://mediaarea.net/en/MediaInfo/Download/Ubuntu) & [ffmpeg](https://ffmpeg.org/download.html) installed on your system
-6. Run the script using [Python3](https://www.python.org/downloads/)
+6. Run the script using [Python3](https://www.python.org/downloads/) (If you're having issues or torf isn't installing, try python3.9)
    
    <br /> 
    
@@ -31,7 +33,9 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
     
 
 # Wiki
+### [Video usage examples](https://github.com/ryelogheat/xpbot/wiki/Video-examples)
 ### [Available args & user input](https://github.com/ryelogheat/xpbot/wiki/Args-and-User-Input)
 ### [config.env breakdown](https://github.com/ryelogheat/xpbot/wiki/config.env)
 ### [/site_templates/*.json guide](https://github.com/ryelogheat/xpbot/wiki/Tracker-Templates)
+### [Automatic re-uploading (autodl)](https://github.com/ryelogheat/xpbot/wiki/autodl-irssi-automatic-re-uploading)
 
