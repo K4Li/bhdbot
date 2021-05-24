@@ -1,9 +1,9 @@
 {
-  "name": "Aither",
-  "url": "https://aither.cc",
-  "upload_form": "https://aither.cc/api/torrents/upload?api_token={api_key}",
-  "torrents_search": "https://aither.cc/api/torrents/filter?api_token={api_key}",
-  "source": "Aither",
+  "name": "Telly",
+  "url": "https://telly.wtf",
+  "upload_form": "https://telly.wtf/api/torrents/upload?api_token={api_key}",
+  "torrents_search": "https://telly.wtf/api/torrents/filter?api_token={api_key}",
+  "source": "Telly",
   "bbcode_line_break": "<br />",
 
 
@@ -13,6 +13,7 @@
     "description": "description",
     "mediainfo": "mediainfo",
     "type": "category_id",
+
     "source": "type_id",
     "resolution": "resolution_id",
     "tmdb": "tmdb",
@@ -42,19 +43,18 @@
     "anonymous": "string",
     "sd": "string",
     "stream": "string",
+
     "tvdb": "string",
     "tmdb": "string",
     "imdb": "string",
     "mal": "string",
     "igdb": "string",
 
-
     "internal": "string",
     "free": "string",
     "featured": "string",
     "doubleup": "string",
     "sticky": "string",
-
 
     "category_id": {
       "1": "movie",
@@ -174,14 +174,9 @@
   },
 
 
-  
+
     "banned_groups": [
-      "GalaxyTV",
-      "TGx",
-      "YIFY",
-      "YTS",
-      "RARBG",
-      "Will1896"
+      "YIFY"
     ]
 
 }
