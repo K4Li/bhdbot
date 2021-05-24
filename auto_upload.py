@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 
 # default included packages
 import os
@@ -58,16 +58,19 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither", "k4l": "k4li"}
+acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd",
+                      "r4e": "racing4everyone", "acm": "asiancinema",
+                      "ath": "aither", "telly": "telly", "ntelogo": "ntelogo"}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
     'bhd_api_key': os.getenv('BHD_API_KEY'),
-    'k4l_api_key': os.getenv('K4L_API_KEY'),
     'blu_api_key': os.getenv('BLU_API_KEY'),
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
-    'ath_api_key': os.getenv('ATH_API_Key'),
+    'ath_api_key': os.getenv('ATH_API_KEY'),
+    'telly_api_key': os.getenv('TELLY_API_KEY'),
+    'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -92,17 +95,25 @@ else:
 
 bdinfo_script = os.getenv('bdinfo_script')
 
+is_live_on_site = str(os.getenv('live')).lower()
+
 
 # Setup args
 parser = argparse.ArgumentParser()
+# Commonly used args:
+parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
+parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path(s) to file/folder")
 parser.add_argument('-tmdb', nargs=1, help="Use this to manually provide the TMDB ID")
 parser.add_argument('-imdb', nargs=1, help="Use this to manually provide the IMDB ID")
-parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
-parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path(s) to file/folder")
+
+# Less commonly used args (Not essential for most)
+# parser.add_argument('-reupload', action='store_true', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
+parser.add_argument('-title', nargs=1, help="Custom title provided by the user")
+parser.add_argument('-reupload', nargs='*', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
 parser.add_argument('-batch', action='store_true', help="Pass this arg if you want to upload all the files/folder within the folder you specify with the '-p' arg")
-parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
+parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
 args = parser.parse_args()
 
@@ -176,6 +187,7 @@ def identify_type_and_basic_info(full_path):
         else:  # The season is listed in the guessit output so we can save that to a new dict we create called 'season_episode_num_dict'
             season_episode_num_dict = {"season_num": int(guessit(full_path)["season"])}
 
+
             # Check to see if this is an individual episode, if so then add that episode number to the dict 'season_episode_num_dict'
             if 'episode' in guessit(full_path):
                 season_episode_num_dict["episode_num"] = int(guessit(full_path)["episode"])
@@ -197,6 +209,7 @@ def identify_type_and_basic_info(full_path):
                     season_episode_num_dict["episode_num"])
             else:  # this is a full season
                 torrent_info["s00e00"] = season_episode_num_dict["season_num"]
+
 
     # ------------ If uploading folder, select video file from within folder ------------ #
     # First make sure we have the path to the actual video file saved in the torrent_info dict
@@ -271,7 +284,9 @@ def identify_type_and_basic_info(full_path):
 
         if 'raw_video_file' not in torrent_info:
             logging.critical(f"The folder {torrent_info['upload_media']} does not contain any video files")
-            sys.exit(f"The folder {torrent_info['upload_media']} does not contain any video files")
+            console.print(f"The folder {torrent_info['upload_media']} does not contain any video files\n\n", style='bold red')
+            return "skip_to_next_file"
+            # sys.exit(f"The folder {torrent_info['upload_media']} does not contain any video files")
 
         torrent_info["raw_file_name"] = os.path.basename(os.path.dirname(f"{full_path}/"))  # this is used to isolate the folder name
     else:
@@ -564,8 +579,8 @@ def analyze_video_file(missing_value):
     if missing_value == "audio_codec":
 
         # We store some common audio code translations in this dict
-        audio_codec_dict = {"AC3": "DD", "AC3+": "DDP", "Dolby Digital Plus": "DDP", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DDP", "A_EAC3": "DDP",
-                            "A_AC3": "DD", "DDP": "DDP"}
+        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+", "A_EAC3": "DD+",
+                            "A_AC3": "DD"}
 
         # First check to see if GuessIt inserted an audio_codec into torrent_info and if it did then we can verify its formatted correctly
         if "audio_codec" in torrent_info:
@@ -1035,7 +1050,7 @@ def get_external_id(id_site, id_value, content_type):
 
     if id_site == 'imdb':
         tmdb_id_request = requests.get(get_tmdb_id_url).json()
-        logging.info(f"GET Request: {tmdb_id_request}")
+        logging.info(f"GET Request: {get_tmdb_id_url}")
         for item in tmdb_id_request:
             if len(tmdb_id_request[item]) == 1:
                 return str(tmdb_id_request[item][0]["id"])
@@ -1106,72 +1121,77 @@ def compare_tmdb_data_local(content_type):
 
 
 def format_title(json_config):
+    # If the user provides this arg with the title right after in double quotes then we automatically use that
+    if args.title:
+        torrent_info["torrent_title"] = str(args.title[0])
 
-    # ------------------ Load correct "naming config" ------------------ #
-    # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
-    # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
-
-    # Because 'webrips' & 'webdls' have basically the same exact naming style we convert the 'source_type' to just 'web' (we do something similar to DVDs as well)
-    if str(torrent_info["source"]).lower() == "dvd":
-        config_profile = "dvd"
-    elif str(torrent_info["source"]).lower() == "web":
-        config_profile = "web"
+    # If the user does not manually provide the title (Most common) then we pull the renaming template from *.json & use all the info we gathered earlier to generate a title
     else:
-        config_profile = torrent_info["source_type"]
+        # ------------------ Load correct "naming config" ------------------ #
+        # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
+        # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
 
-
-
-    # tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
-    tracker_torrent_name_style_config = config_profile
-    tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config)]
-
-
-
-    # ------------------ Set some default naming styles here ------------------ #
-    # Fix Bluray
-    if "bluray" in torrent_info["source_type"]:
-        if "disc" in torrent_info["source_type"]:
-            # Raw bluray discs have a "-" between the words "Blu" & "Ray"
-            torrent_info["source"] = "Blu-ray"
+        # Because 'webrips' & 'webdls' have basically the same exact naming style we convert the 'source_type' to just 'web' (we do something similar to DVDs as well)
+        if str(torrent_info["source"]).lower() == "dvd":
+            config_profile = "dvd"
+        elif str(torrent_info["source"]).lower() == "web":
+            config_profile = "web"
         else:
-            # Bluray encodes & Remuxs just use the complete word "Bluray"
-            torrent_info["source"] = "Bluray"
-
-    # Now fix WEB
-    if str(torrent_info["source"]).lower() == "web":
-        if torrent_info["source_type"] == "webrip":
-            torrent_info["web_type"] = "WEBRip"
-        else:
-            torrent_info["web_type"] = "WEB-DL"
-
-    # Fix DVD
-    if str(torrent_info["source"]).lower() == "dvd":
-        if torrent_info["source_type"] in ('dvd_remux', 'dvd_disc'):
-            # later in the script if this ends up being a DVD Remux we will add the tag "Remux" to the torrent title
-            torrent_info["source"] = "DVD"
-        else:
-            # Anything else is just a dvdrip
-            torrent_info["source"] = "DVDRip"
+            config_profile = torrent_info["source_type"]
 
 
 
-    # ------------------ Actual format the title now ------------------ #
+        # tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
+        tracker_torrent_name_style_config = config_profile
+        tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config)]
 
-    # This dict will store the "torrent_info" response for each item in the "naming config"
-    generate_format_string = {}
 
-    temp_load_torrent_info = tracker_torrent_name_style.replace("{", "").replace("}", "").split(" ")
-    for item in temp_load_torrent_info:
-        # Here is were we actual get the torrent_info response and add it to the "generate_format_string" dict we declared earlier
-        generate_format_string[item] = torrent_info[item] if item in torrent_info else ""
 
-    formatted_title = ""  # This is the final torrent title, we add any info we get from "torrent_info" to it using the "for loop" below
-    for key, value in generate_format_string.items():
-        if len(value) != 0:  # ignore no matches (e.g. most TV Shows don't have the "year" added to its title so unless it was directly specified in the filename we also ignore it)
-            formatted_title = f'{formatted_title}{"-" if key == "release_group" else " "}{value}'
+        # ------------------ Set some default naming styles here ------------------ #
+        # Fix Bluray
+        if "bluray" in torrent_info["source_type"]:
+            if "disc" in torrent_info["source_type"]:
+                # Raw bluray discs have a "-" between the words "Blu" & "Ray"
+                torrent_info["source"] = "Blu-ray"
+            else:
+                # Bluray encodes & Remuxs just use the complete word "Bluray"
+                torrent_info["source"] = "Bluray"
 
-    # Finally save the "formatted_title" into torrent_info which later will get passed to the dict "tracker_settings" which is used to store the payload for the actual POST upload request
-    torrent_info["torrent_title"] = str(formatted_title[1:])
+        # Now fix WEB
+        if str(torrent_info["source"]).lower() == "web":
+            if torrent_info["source_type"] == "webrip":
+                torrent_info["web_type"] = "WEBRip"
+            else:
+                torrent_info["web_type"] = "WEB-DL"
+
+        # Fix DVD
+        if str(torrent_info["source"]).lower() == "dvd":
+            if torrent_info["source_type"] in ('dvd_remux', 'dvd_disc'):
+                # later in the script if this ends up being a DVD Remux we will add the tag "Remux" to the torrent title
+                torrent_info["source"] = "DVD"
+            else:
+                # Anything else is just a dvdrip
+                torrent_info["source"] = "DVDRip"
+
+
+
+        # ------------------ Actual format the title now ------------------ #
+
+        # This dict will store the "torrent_info" response for each item in the "naming config"
+        generate_format_string = {}
+
+        temp_load_torrent_info = tracker_torrent_name_style.replace("{", "").replace("}", "").split(" ")
+        for item in temp_load_torrent_info:
+            # Here is were we actual get the torrent_info response and add it to the "generate_format_string" dict we declared earlier
+            generate_format_string[item] = torrent_info[item] if item in torrent_info else ""
+
+        formatted_title = ""  # This is the final torrent title, we add any info we get from "torrent_info" to it using the "for loop" below
+        for key, value in generate_format_string.items():
+            if len(value) != 0:  # ignore no matches (e.g. most TV Shows don't have the "year" added to its title so unless it was directly specified in the filename we also ignore it)
+                formatted_title = f'{formatted_title}{"-" if key == "release_group" else " "}{value}'
+
+        # Finally save the "formatted_title" into torrent_info which later will get passed to the dict "tracker_settings" which is used to store the payload for the actual POST upload request
+        torrent_info["torrent_title"] = str(formatted_title[1:])
 
     # Update discord channel
     if discord_url:
@@ -1344,8 +1364,8 @@ def choose_right_tracker_keys():
 
                     # BHD requires the key "live" (0 = Sent to drafts and 1 = Live on site)
                     elif required_key == "live":
-                        live = '1' if str(os.getenv('live')).upper() == 'TRUE' else '0'
-                        logging.info(f"Upload live status: {'Live (Visible)' if str(os.getenv('live')).upper() == 'TRUE' else 'Draft (Hidden)'}")
+                        live = '1' if is_live_on_site == 'true' else '0'
+                        logging.info(f"Upload live status: {'Live (Visible)' if is_live_on_site == 'true' else 'Draft (Hidden)'}")
                         tracker_settings[config["translation"][translation_key]] = live
 
                     # If the user supplied the "-anon" argument then we want to pass that along when uploading
@@ -1512,6 +1532,9 @@ def upload_to_site(upload_to, tracker_api_key):
     logging.info(f"POST Request: {url}")
     logging.info(f"Response code: {response.status_code}")
 
+    console.print(f'Site response: [blue]{response.text}[/blue]')
+    logging.info(response.text)
+
     if response.status_code == 200:
         logging.info(f"upload response for {upload_to}: {response.text.encode('utf8')}")
         # Update discord channel
@@ -1552,6 +1575,48 @@ def upload_to_site(upload_to, tracker_api_key):
 script_start_time = time.perf_counter()
 starting_new_upload = f" {'-' * 24} Starting new upload {'-' * 24} "
 logging.info(starting_new_upload)
+
+# Set the value of args.path to a variable that we can overwrite with a path translation later (if needed)
+user_supplied_paths = args.path
+
+# Verify the script is in "auto_mode" and if needed map rtorrent download path to system path
+if args.reupload:
+    logging.info('reuploading a match from autodl')
+
+
+    # Firstly remove the underscore separator from the trackers the user provided in the autodl filter & make replace args.trackers with it
+    args.trackers = str(args.trackers[0]).split('_')
+
+
+    # set auto_mode equal to True for this upload (if its not already)
+    # since we are reuploading autodl matches its probably safe to say this is all automated & no one will be available to approve or interact with any prompt
+    if auto_mode == 'false':
+        logging.info('Temporarily switching "auto_mode" to "true" for this autodl reupload')
+        auto_mode = 'true'
+
+
+    if str(os.getenv('translation_needed')).lower() == 'true':
+        # Currently it is only possible for 1 path to be based from autodl but just in case & for futureproofing we will treat it as a list of multiple paths
+        logging.info('Translating paths... ("translation_needed" flag set to True in config.env) ')
+
+        # Just in case the user didn't end the path with a forward slash...
+        host_path = f"{os.getenv('host_path')}/".replace('//', '/')
+        remote_path = f"{os.getenv('remote_path')}/".replace('//', '/')
+
+        # Now we replace the remote (rtorrent) path with the system one
+        for path in user_supplied_paths:
+            translated_path = str(path).replace(remote_path, host_path)
+
+            # Remove the old path from the list & add the new one in its place
+            user_supplied_paths.remove(path)
+            user_supplied_paths.append(translated_path)
+
+            # And finally log the changes
+            logging.info(f'rtorrent path: {path}')
+            logging.info(f'Translated path: {translated_path}')
+
+
+
 # If a user has supplied a discord webhook URL we can send updates to that channel
 if discord_url:
     requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content={starting_new_upload}')
@@ -1638,7 +1703,7 @@ if args.batch:
 else:
     logging.info("Running in regular '-path' mode, starting upload now")
     # This means the ran the script normally and specified a direct path to some media (or multiple media items, in which case we append it like normal to the list 'upload_queue')
-    for arg_file in args.path:
+    for arg_file in user_supplied_paths:
         upload_queue.append(arg_file)
 
 # Now for each file we've been supplied (batch more or just the user manually specifying multiple files) we create a loop here that uploads each of them until none are left
@@ -1646,16 +1711,57 @@ for file in upload_queue:
     # Remove all old temp_files & data from the previous upload
     delete_leftover_files()
     torrent_info.clear()
-    logging.info(f'uploading the following file: {file}')
-    # finally add this current loops media file to the dict 'torrent_info' and let all the function calls below handle it now
-    torrent_info["upload_media"] = file
+
+    # File we're uploading
+    console.print(f'Uploading: [bold][blue]{file}[/blue][/bold]')
+
+    # If the path the user specified is a folder with .rar files in it then we unpack the video file & set the torrent_info key equal to the extracted video file
+    if os.path.isdir(file):
+        # Set the 'upload_media' right away, if we end up extracting from a rar archive we will just overwriting it with the .mkv we extracted
+        torrent_info["upload_media"] = file
+
+        # Now we check to see if the dir contains rar files
+        rar_file = glob.glob(f"{os.path.join(file, '')}*rar")
+        if rar_file:
+            logging.info(f"'{file}' is a .rar archive, extracting now")
+            logging.info(f"rar file: {rar_file[0]}")
+
+            # Now verify that unrar is installed
+            unrar_sys_package = '/usr/bin/unrar'
+            if os.path.isfile(unrar_sys_package):
+                logging.info("Found 'unrar' system package, Using it to extract the video file now")
+
+                # run the system package unrar and save the extracted file to its parent dir
+                subprocess.run([unrar_sys_package, 'e', rar_file[0], file])
+
+                # This is how we identify which file we just extracted (Last modified)
+                list_of_files = glob.glob(f"{os.path.join(file, '')}*")
+                latest_file = max(list_of_files, key=os.path.getctime)
+
+                # Overwrite the value for 'upload_media' with the path to the video file we just extracted
+                torrent_info["upload_media"] = latest_file
+
+
+            # If the user doesn't have unrar installed then we let them know here and move on to the next file (if exists)
+            else:
+                console.print('unrar is not installed, Unable to extract the rar archinve\n', style='bold red')
+                logging.critical('"unrar" is not installed, Unable to extract rar archive')
+                logging.info('Perhaps first try "sudo apt-get install unrar" then run this script again')
+                continue  # Skip this entire 'file upload' & move onto the next (if exists)
+
+    else:
+        torrent_info["upload_media"] = file
+        logging.info(f'uploading the following file: {file}')
 
 
 
 
     # -------- Basic info --------
     # So now we can start collecting info about the file/folder that was supplied to us (Step 1)
-    identify_type_and_basic_info(torrent_info["upload_media"])
+    if identify_type_and_basic_info(torrent_info["upload_media"]) == 'skip_to_next_file':
+        # If there is an issue with the file & we can't upload we use this check to skip the current file & move on to the next (if exists)
+        continue
+
     # Update discord channel
     if discord_url:
         requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading: **{torrent_info["upload_media"]}**')
@@ -1683,9 +1789,16 @@ for file in upload_queue:
 
     # -------- Get TMDB & IMDB ID --------
     # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
+
     for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
         if media_id_val is not None and len(media_id_val[0]) > 1:  # we include ' > 1 ' to prevent blank ID's and issues later
-            torrent_info[media_id_key] = media_id_val[0]
+
+            # We have one more check here to verify that the "tt" is included for the IMDB ID (TMDB won't accept it if it doesnt)
+            if media_id_key == 'imdb' and not str(media_id_val[0]).lower().startswith('tt'):
+                torrent_info["imdb"] = f'tt{media_id_val[0]}'
+            else:
+                torrent_info[media_id_key] = media_id_val[0]
+
 
     if all(x in torrent_info for x in ['imdb', 'tmdb']):
         # This means both the TMDB & IMDB ID are already in the torrent_info dict
@@ -1768,6 +1881,11 @@ for file in upload_queue:
                 os.remove(f'{working_folder}/temp_upload/description.txt')
 
             # Now open up the correct files and format all the bbcode/tags below
+            with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
+                # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
+                description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
+
+                # Now open up the correct files and format all the bbcode/tags below
             with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
                 # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
                 description.write(f'[center]')
