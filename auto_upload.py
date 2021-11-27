@@ -58,19 +58,23 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd",
-                      "r4e": "racing4everyone", "acm": "asiancinema",
-                      "ath": "aither", "telly": "telly", "ntelogo": "ntelogo"}
+acronym_to_tracker = {
+    "blu": "blutopia", "bhd": "beyond-hd", "rfx": "reelflix", 
+    "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither", "telly": "telly",
+    "ntelogo": "ntelogo", "ufhd": "uncutflixhd"
+}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
     'bhd_api_key': os.getenv('BHD_API_KEY'),
     'blu_api_key': os.getenv('BLU_API_KEY'),
+    'rfx_api_key': os.getenv('RFX_API_KEY'),
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
     'ath_api_key': os.getenv('ATH_API_KEY'),
     'telly_api_key': os.getenv('TELLY_API_KEY'),
     'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
+    'ufhd_api_key': os.getenv('UFHD_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -1880,15 +1884,11 @@ for file in upload_queue:
             if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
                 os.remove(f'{working_folder}/temp_upload/description.txt')
 
-            # Now open up the correct files and format all the bbcode/tags below
+                        # Now open up the correct files and format all the bbcode/tags below
             with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
                 # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-                description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
-
-                # Now open up the correct files and format all the bbcode/tags below
-            with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
-                # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-                description.write(f'[center]')
+                description.write(f'[center][size=16][color=white][b]{torrent_info["torrent_title"]}[/b][/color][/size]')
+                description.write(f'{bbcode_line_break}{bbcode_line_break}')
 
                 # Now write in the actual screenshot bbcode
                 for line in bbcode:
@@ -1899,7 +1899,6 @@ for file in upload_queue:
 
             # Add the finished file to the 'torrent_info' dict
             torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
-
 
         # -------- Check for Dupes --------
         if os.getenv('check_dupes') == 'true':
